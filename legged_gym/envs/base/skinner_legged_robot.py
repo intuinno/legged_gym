@@ -100,7 +100,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras, self.pretrained_obs_buf
+        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
@@ -225,10 +225,8 @@ class SkinnerLeggedRobot(BaseTask):
             heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
             self.pretrained_obs_buf = torch.cat((self.pretrained_obs_buf, heights), dim=-1)
 
-        self.obs_buf = torch.cat(( self.base_lin_vel * self.obs_scales.lin_vel,
-                                        self.base_ang_vel * self.obs_scales.ang_vel,
-                                        self.commands[:, :3] * self.commands_scale,          
-                                        ), dim=-1)
+        self.obs_buf = torch.cat(( self.diff_pos,
+                                self.commands), dim=-1)
         # add noise if needed
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
@@ -332,7 +330,8 @@ class SkinnerLeggedRobot(BaseTask):
         # self._resample_commands(env_ids)
 
         # Calculate target_dist 
-        self.target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_pos).sum(-1))
+        self.diff_pos = self.target_root_positions - self.root_pos
+        self.target_dist = torch.sqrt(torch.square(self.diff_pos).sum(-1))
 
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -418,7 +417,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.root_states[env_ids, 7:13] = torch_rand_float(-0.5, 0.5, (len(env_ids), 6), device=self.device) # [7:10]: lin vel, [10:13]: ang vel
         env_ids_int32 = env_ids.to(dtype=torch.int32)
         self.gym.set_actor_root_state_tensor_indexed(self.sim,
-                                                     gymtorch.unwrap_tensor(self.root_states),
+                                                     self.root_tensor,
                                                      gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
 
     def _push_robots(self):
@@ -491,7 +490,7 @@ class SkinnerLeggedRobot(BaseTask):
         """ Initialize torch tensors which will contain simulation states and processed quantities
         """
         # get gym GPU state tensors
-        actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
+        self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
         dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         net_contact_forces = self.gym.acquire_net_contact_force_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
@@ -499,10 +498,10 @@ class SkinnerLeggedRobot(BaseTask):
         self.gym.refresh_net_contact_force_tensor(self.sim)
 
         # create some wrapper tensors for different slices
-        self.vec_root_tensor = gymtorch.wrap_tensor(actor_root_state).view(self.num_envs, 2, 13)
+        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 2, 13)
         
         # Set up anymal buffer
-        self.root_states = self.vec_root_tensor[:, 0, :]
+        self.root_states = vec_root_tensor[:, 0, :]
         self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
         self.root_pos = self.root_states[:, 0:3]
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
@@ -511,7 +510,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.contact_forces = gymtorch.wrap_tensor(net_contact_forces).view(self.num_envs, -1, 3) # shape: num_envs, num_bodies, xyz axis
 
         # Set up ball marker buffer
-        self.marker_states = self.vec_root_tensor[:, 1, :]
+        self.marker_states = vec_root_tensor[:, 1, :]
         self.marker_positions = self.marker_states[:, 0:3]
         self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
         self.target_root_positions[:, 2] = 1

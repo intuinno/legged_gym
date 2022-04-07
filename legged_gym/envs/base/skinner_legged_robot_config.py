@@ -187,7 +187,7 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
     class policy:
         # Policy observation is different from env observation
         # Here policy is only training navigation on top of pretrained walking model
-        num_observations = 7 # 3 for diff location. 4 for previous command 
+        num_obs = 7 # 3 for diff location. 4 for previous command 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 4 # 4 command for walking model. [LinX LinY Heading AngVel]
         init_noise_std = 1.0
