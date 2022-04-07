@@ -100,7 +100,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.obs_buf = torch.clip(self.obs_buf, -clip_obs, clip_obs)
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
-        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
+        return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras, self.pretrained_obs_buf
 
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
@@ -212,7 +212,7 @@ class SkinnerLeggedRobot(BaseTask):
     def compute_observations(self):
         """ Computes observations
         """
-        self.obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
+        self.pretrained_obs_buf = torch.cat((  self.base_lin_vel * self.obs_scales.lin_vel,
                                     self.base_ang_vel  * self.obs_scales.ang_vel,
                                     self.projected_gravity,
                                     self.commands[:, :3] * self.commands_scale,
@@ -223,10 +223,18 @@ class SkinnerLeggedRobot(BaseTask):
         # add perceptive inputs if not blind
         if self.cfg.terrain.measure_heights:
             heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
-            self.obs_buf = torch.cat((self.obs_buf, heights), dim=-1)
+            self.pretrained_obs_buf = torch.cat((self.pretrained_obs_buf, heights), dim=-1)
+
+        self.obs_buf = torch.cat(( self.base_lin_vel * self.obs_scales.lin_vel,
+                                        self.base_ang_vel * self.obs_scales.ang_vel,
+                                        self.commands[:, :3] * self.commands_scale,          
+                                        ), dim=-1)
         # add noise if needed
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
+            
+    def get_pretrained_observations(self):
+        return self.pretrained_obs_buf
 
     def create_sim(self):
         """ Creates simulation, terrain and evironments
@@ -321,7 +329,11 @@ class SkinnerLeggedRobot(BaseTask):
         """
         # 
         env_ids = (self.episode_length_buf % int(self.cfg.commands.resampling_time / self.dt)==0).nonzero(as_tuple=False).flatten()
-        self._resample_commands(env_ids)
+        # self._resample_commands(env_ids)
+
+        # Calculate target_dist 
+        self.target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_pos).sum(-1))
+
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
             heading = torch.atan2(forward[:, 1], forward[:, 0])
@@ -448,7 +460,6 @@ class SkinnerLeggedRobot(BaseTask):
         if torch.mean(self.episode_sums["tracking_lin_vel"][env_ids]) / self.max_episode_length > 0.8 * self.reward_scales["tracking_lin_vel"]:
             self.command_ranges["lin_vel_x"][0] = np.clip(self.command_ranges["lin_vel_x"][0] - 0.5, -self.cfg.commands.max_curriculum, 0.)
             self.command_ranges["lin_vel_x"][1] = np.clip(self.command_ranges["lin_vel_x"][1] + 0.5, 0., self.cfg.commands.max_curriculum)
-
 
     def _get_noise_scale_vec(self, cfg):
         """ Sets a vector used to scale the noise added to the observations.
@@ -861,5 +872,4 @@ class SkinnerLeggedRobot(BaseTask):
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        target_dist = torch.sqrt(torch.square(self.target_root_positions - self.root_pos).sum(-1))
-        return 1.0 / (1.0 + target_dist * target_dist)
+        return 1.0 / (1.0 + self.target_dist * self.target_dist)

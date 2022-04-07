@@ -185,6 +185,11 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
     seed = 1
     runner_class_name = 'SkinnerOnPolicyRunner'
     class policy:
+        # Policy observation is different from env observation
+        # Here policy is only training navigation on top of pretrained walking model
+        num_observations = 7 # 3 for diff location. 4 for previous command 
+        num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
+        num_actions = 4 # 4 command for walking model. [LinX LinY Heading AngVel]
         init_noise_std = 1.0
         actor_hidden_dims = [56, 28, 14] # 7 input dimension. 3 for diff location. 4 for commands
         critic_hidden_dims = [56, 28, 14]
@@ -214,7 +219,15 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         algorithm_class_name = 'PPO'
         num_steps_per_env = 24 # per iteration
         max_iterations = 1500 # number of policy updates
-
+        # Pretrained model parameters
+        pretrained_policy_path = '/home/intuinno/codegit/legged_gym/resources/walker_nets/walker.pt'
+        pretrained_num_obs = 235
+        pretrained_num_critic_obs = 235
+        pretrained_num_actions = 12
+        pretrained_actor_hidden_dims = [512, 256, 128]
+        pretrained_critic_hidden_dims = [512, 256, 128]
+        pretrained_activation = 'elu'
+        pretrained_init_noise_std = 1.0
         # logging
         save_interval = 50 # check for potential saves every this many iterations
         experiment_name = 'test'
