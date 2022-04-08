@@ -33,7 +33,7 @@ from .base_config import BaseConfig
 class SkinnerLeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_observations = 7
+        num_observations = 11
         num_pretrained_observations = 235 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
