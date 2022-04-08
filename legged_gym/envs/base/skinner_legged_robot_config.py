@@ -33,7 +33,7 @@ from .base_config import BaseConfig
 class SkinnerLeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_observations = 11
+        num_observations = 10
         num_pretrained_observations = 235 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
@@ -188,7 +188,7 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
     class policy:
         # Policy observation is different from env observation
         # Here policy is only training navigation on top of pretrained walking model
-        num_obs = 11 # 3 for diff location. 4 for previous command. 4 for base quarternion 
+        num_obs = 10 # 3 for diff location. 4 for previous command. 3 for base velocity 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 4 # 4 command for walking model. [LinX LinY Heading AngVel]
         init_noise_std = 1.0
