@@ -16,7 +16,7 @@
 				"type": "python",
 				"request": "launch",
 				"program": "/home/intuinno/codegit/legged_gym/legged_gym/scripts/train.py",
-				"args": ["--headless", "--task=skinner", "--num_envs=128", "--sim_device=cpu","--rl_device=cpu"],
+				"args": ["--headless", "--task=skinner", "--num_envs=128"]
 				"console": "integratedTerminal",
 				"justMyCode": true
 			}

@@ -395,9 +395,12 @@ class SkinnerLeggedRobot(BaseTask):
         self.dof_vel[env_ids] = 0.
 
         env_ids_int32 = env_ids.to(dtype=torch.int32)
+
+        actor_indices = self.all_actor_indices[env_ids, 0].flatten()
+        
         self.gym.set_dof_state_tensor_indexed(self.sim,
-                                              gymtorch.unwrap_tensor(self.dof_state),
-                                              gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+                                              self.dof_state_tensor, 
+                                              gymtorch.unwrap_tensor(actor_indices), len(env_ids_int32))
     def _reset_root_states(self, env_ids):
         """ Resets ROOT states position and velocities of selected environmments
             Sets base position based on the curriculum
@@ -491,7 +494,7 @@ class SkinnerLeggedRobot(BaseTask):
         """
         # get gym GPU state tensors
         self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
-        dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
+        self.dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
         net_contact_forces = self.gym.acquire_net_contact_force_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
         self.gym.refresh_actor_root_state_tensor(self.sim)
@@ -502,7 +505,7 @@ class SkinnerLeggedRobot(BaseTask):
         
         # Set up anymal buffer
         self.root_states = vec_root_tensor[:, 0, :]
-        self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
+        self.dof_state = gymtorch.wrap_tensor(self.dof_state_tensor)
         self.root_pos = self.root_states[:, 0:3]
         self.dof_pos = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 0]
         self.dof_vel = self.dof_state.view(self.num_envs, self.num_dof, 2)[..., 1]
@@ -538,6 +541,8 @@ class SkinnerLeggedRobot(BaseTask):
         if self.cfg.terrain.measure_heights:
             self.height_points = self._init_height_points()
         self.measured_heights = 0
+        
+        self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
@@ -722,12 +727,15 @@ class SkinnerLeggedRobot(BaseTask):
                 
             rigid_shape_props = self._process_rigid_shape_props(rigid_shape_props_asset, i)
             self.gym.set_asset_rigid_shape_properties(robot_asset, rigid_shape_props)
-            actor_handle = self.gym.create_actor(env_handle, robot_asset, start_pose, self.cfg.asset.name, i, self.cfg.asset.self_collisions, 0)
+            actor_handle = self.gym.create_actor(env_handle, robot_asset, start_pose, self.cfg.asset.name, i, 1, 1)
             dof_props = self._process_dof_props(dof_props_asset, i)
             self.gym.set_actor_dof_properties(env_handle, actor_handle, dof_props)
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
+
+            pos[:2] += torch_rand_float(-2., 2., (2,1), device=self.device).squeeze(1) 
+            default_pose.p = gymapi.Vec3(*pos)
 
             #Add ballmarker
             marker_handle = self.gym.create_actor(env_handle, marker_asset, default_pose, "marker", i, 1, 1)
