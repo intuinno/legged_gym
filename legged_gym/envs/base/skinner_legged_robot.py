@@ -226,6 +226,7 @@ class SkinnerLeggedRobot(BaseTask):
             self.pretrained_obs_buf = torch.cat((self.pretrained_obs_buf, heights), dim=-1)
 
         self.obs_buf = torch.cat(( self.diff_pos,
+                                  self.base_quat,
                                 self.commands), dim=-1)
         # add noise if needed
         if self.add_noise:
