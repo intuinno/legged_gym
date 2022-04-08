@@ -16,7 +16,16 @@
 				"type": "python",
 				"request": "launch",
 				"program": "/home/intuinno/codegit/legged_gym/legged_gym/scripts/train.py",
-				"args": ["--headless", "--task=skinner", "--num_envs=128"]
+				"args": ["--headless", "--task=skinner", "--num_envs=128"],
+				"console": "integratedTerminal",
+				"justMyCode": true
+			},
+			{
+				"name": "skinner play",
+				"type": "python",
+				"request": "launch",
+				"program": "/home/intuinno/codegit/legged_gym/legged_gym/scripts/skinner_play.py",
+				"args": ["--task=skinner", "--experiment=ball"],
 				"console": "integratedTerminal",
 				"justMyCode": true
 			}

@@ -515,10 +515,12 @@ class SkinnerLeggedRobot(BaseTask):
         # Set up ball marker buffer
         self.marker_states = vec_root_tensor[:, 1, :]
         self.marker_positions = self.marker_states[:, 0:3]
-        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        self.target_root_positions[:, 2] = 1
+        # self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        # self.target_root_positions[:, 2] = 1
+        self.target_root_positions = self.marker_states[:, 0:3]
 
         # initialize some data used later on
+        self.pretrained_obs_buf = torch.zeros(self.num_envs, self.cfg.env.num_pretrained_observations, device=self.device, dtype=torch.float)
         self.common_step_counter = 0
         self.extras = {}
         self.noise_scale_vec = self._get_noise_scale_vec(self.cfg)
@@ -734,12 +736,13 @@ class SkinnerLeggedRobot(BaseTask):
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
 
-            pos[:2] += torch_rand_float(-2., 2., (2,1), device=self.device).squeeze(1) 
+            pos[:2] += torch_rand_float(-1., 1., (2,1), device=self.device).squeeze(1) 
+            
             default_pose.p = gymapi.Vec3(*pos)
 
             #Add ballmarker
             marker_handle = self.gym.create_actor(env_handle, marker_asset, default_pose, "marker", i, 1, 1)
-            self.gym.set_rigid_body_color(env_handle, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
+            self.gym.set_rigid_body_color(env_handle, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(0, 0, 1))
 
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
@@ -873,10 +876,10 @@ class SkinnerLeggedRobot(BaseTask):
 
     #------------ reward functions----------------
     
-    def _reward_termination(self):
-        # Terminal reward / penalty
-        return self.reset_buf * ~self.time_out_buf
+    # def _reward_termination(self):
+    #     # Terminal reward / penalty
+    #     return self.reset_buf * ~self.time_out_buf
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        return 1.0 / (1.0 + self.target_dist * self.target_dist)
+        return 10000 / (1.0 + self.target_dist * self.target_dist)
