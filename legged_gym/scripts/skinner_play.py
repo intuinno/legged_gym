@@ -28,6 +28,9 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+
+
+
 from legged_gym import LEGGED_GYM_ROOT_DIR
 import os
 
@@ -42,7 +45,7 @@ from rsl_rl.modules import ActorCritic
 def play(args):
     env_cfg, train_cfg = task_registry.get_cfgs(name=args.task)
     # override some parameters for testing
-    env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
+    # env_cfg.env.num_envs = min(env_cfg.env.num_envs, 50)
     env_cfg.terrain.num_rows = 5
     env_cfg.terrain.num_cols = 5
     env_cfg.terrain.curriculum = False
@@ -79,11 +82,15 @@ def play(args):
 
     for i in range(10*int(env.max_episode_length)):
         commands = policy(obs.detach())
-        # fixed_commands = commands.clone().detach()
-        # fixed_commands[:,0:3] = torch.tensor([1.,1.,0]).to(env.device)
         updated_obs = pretrained_obs.clone().detach().to(env.device)
-        updated_obs[:,9:12] = commands[:, :3]
-        # updated_obs[:,9:12] = fixed_commands[:, :3]
+
+        if FIXED_COMMANDS:
+            fixed_commands = commands.clone().detach()
+            fixed_commands[:,0:3] = torch.tensor([1.,0.,0]).to(env.device)
+            updated_obs[:, 9:12] = fixed_commands[:, :3]
+        else:
+            updated_obs[:,9:12] = commands[:, :3]
+
         actions = pretrained_policy(updated_obs)
         
         obs, _, rews, dones, infos = env.step(actions.detach())
@@ -130,6 +137,7 @@ def play(args):
 if __name__ == '__main__':
     EXPORT_POLICY = True
     RECORD_FRAMES = True
-    MOVE_CAMERA = True
+    MOVE_CAMERA = False
+    FIXED_COMMANDS = True
     args = get_args()
     play(args)

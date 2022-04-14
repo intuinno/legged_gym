@@ -28,6 +28,8 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+DEBUG_SAVE_CAMERA_IMAGES = True 
+
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
 from warnings import WarningMessage
@@ -76,6 +78,9 @@ class SkinnerLeggedRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
 
+        if DEBUG_SAVE_CAMERA_IMAGES:
+            self.img_idx = 0
+
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
 
@@ -102,6 +107,25 @@ class SkinnerLeggedRobot(BaseTask):
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
         return self.obs_buf, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras
 
+    def render(self):
+        super().render()
+        self.gym.render_all_camera_sensors(self.sim)
+        self.gym.start_access_image_tensors(self.sim)
+
+        if DEBUG_SAVE_CAMERA_IMAGES:
+            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
+            os.makedirs(path, exist_ok=True)
+            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")
+            self.gym.write_camera_image_to_file(self.sim,
+                                                self.envs[0],
+                                                self.camera_handles[0],
+                                                gymapi.IMAGE_COLOR,
+                                                filename)
+            self.img_idx += 1
+        
+        self.gym.end_access_image_tensors(self.sim)
+        
+        
     def post_physics_step(self):
         """ check terminations, compute observations and rewards
             calls self._post_physics_step_callback() for common computations 
@@ -420,9 +444,12 @@ class SkinnerLeggedRobot(BaseTask):
         # base velocities
         self.root_states[env_ids, 7:13] = torch_rand_float(-0.5, 0.5, (len(env_ids), 6), device=self.device) # [7:10]: lin vel, [10:13]: ang vel
         env_ids_int32 = env_ids.to(dtype=torch.int32)
+
+        actor_indices= self.all_actor_indices[env_ids,0].flatten()
+        
         self.gym.set_actor_root_state_tensor_indexed(self.sim,
                                                      self.root_tensor,
-                                                     gymtorch.unwrap_tensor(env_ids_int32), len(env_ids_int32))
+                                                     gymtorch.unwrap_tensor(actor_indices), len(env_ids_int32))
 
     def _push_robots(self):
         """ Random pushes the robots. Emulates an impulse by setting a randomized base velocity. 
@@ -565,6 +592,14 @@ class SkinnerLeggedRobot(BaseTask):
                 if self.cfg.control.control_type in ["P", "V"]:
                     print(f"PD gain of joint {name} were not defined, setting them to zero")
         self.default_dof_pos = self.default_dof_pos.unsqueeze(0)
+
+        # Set up camera tensors
+        camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, 
+                                                        self.envs[0],
+                                                        self.camera_handles[0],
+                                                        gymapi.IMAGE_COLOR)
+        self.torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
+        
 
     def _prepare_reward_function(self):
         """ Prepares a list of reward functions, whcih will be called to compute the total reward.
@@ -720,6 +755,16 @@ class SkinnerLeggedRobot(BaseTask):
         self.actor_handles = []
         self.marker_handles = []
         self.envs = []
+        self.camera_handles = []
+        
+        # Camera Propoerties
+        camera_offset = gymapi.Vec3(0.6, 0, 1.0)
+        camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
+        camera_properties = gymapi.CameraProperties()
+        camera_properties.width = 360
+        camera_properties.height = 240
+        camera_properties.enable_tensors = True
+
 
         for i in range(self.num_envs):
             # create env instance
@@ -727,7 +772,8 @@ class SkinnerLeggedRobot(BaseTask):
             pos = self.env_origins[i].clone()
             pos[:2] += torch_rand_float(-1., 1., (2,1), device=self.device).squeeze(1)
             start_pose.p = gymapi.Vec3(*pos)
-                
+            
+            # create anymal robot
             rigid_shape_props = self._process_rigid_shape_props(rigid_shape_props_asset, i)
             self.gym.set_asset_rigid_shape_properties(robot_asset, rigid_shape_props)
             actor_handle = self.gym.create_actor(env_handle, robot_asset, start_pose, self.cfg.asset.name, i, 1, 1)
@@ -736,6 +782,7 @@ class SkinnerLeggedRobot(BaseTask):
             body_props = self.gym.get_actor_rigid_body_properties(env_handle, actor_handle)
             body_props = self._process_rigid_body_props(body_props, i)
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
+            base_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
 
             pos[:2] += torch_rand_float(-1., 1., (2,1), device=self.device).squeeze(1) 
             
@@ -744,7 +791,12 @@ class SkinnerLeggedRobot(BaseTask):
             #Add ballmarker
             marker_handle = self.gym.create_actor(env_handle, marker_asset, default_pose, "marker", i, 1, 1)
             self.gym.set_rigid_body_color(env_handle, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(0, 0, 1))
-
+            
+            #Add a camera to the base of anymal
+            camera_handle = self.gym.create_camera_sensor(env_handle, camera_properties)
+            self.gym.attach_camera_to_body(camera_handle, env_handle, base_handle, gymapi.Transform(camera_offset, camera_rotation), gymapi.FOLLOW_TRANSFORM)
+            self.camera_handles.append(camera_handle)
+            
             self.envs.append(env_handle)
             self.actor_handles.append(actor_handle)
             self.marker_handles.append(marker_handle)
