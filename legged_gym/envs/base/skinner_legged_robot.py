@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-DEBUG_SAVE_CAMERA_IMAGES = True 
+DEBUG_SAVE_CAMERA_IMAGES = False 
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
@@ -110,20 +110,7 @@ class SkinnerLeggedRobot(BaseTask):
     def render(self):
         super().render()
         self.gym.render_all_camera_sensors(self.sim)
-        self.gym.start_access_image_tensors(self.sim)
 
-        if DEBUG_SAVE_CAMERA_IMAGES:
-            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
-            os.makedirs(path, exist_ok=True)
-            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")
-            self.gym.write_camera_image_to_file(self.sim,
-                                                self.envs[0],
-                                                self.camera_handles[0],
-                                                gymapi.IMAGE_COLOR,
-                                                filename)
-            self.img_idx += 1
-        
-        self.gym.end_access_image_tensors(self.sim)
         
         
     def post_physics_step(self):
@@ -248,10 +235,27 @@ class SkinnerLeggedRobot(BaseTask):
         if self.cfg.terrain.measure_heights:
             heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
             self.pretrained_obs_buf = torch.cat((self.pretrained_obs_buf, heights), dim=-1)
+        
+        self.gym.start_access_image_tensors(self.sim)
 
-        self.obs_buf = torch.cat(( self.diff_pos,
+        if DEBUG_SAVE_CAMERA_IMAGES:
+            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
+            os.makedirs(path, exist_ok=True)
+            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")
+            self.gym.write_camera_image_to_file(self.sim,
+                                                self.envs[0],
+                                                self.camera_handles[0],
+                                                gymapi.IMAGE_COLOR,
+                                                filename)
+            self.img_idx += 1
+        
+        self.obs_buf = torch.cat(( self.camera_buffers,
+                                  self.diff_pos,
                                   self.base_lin_vel,
-                                self.commands), dim=-1)
+                                  self.commands), dim=-1) 
+        self.gym.end_access_image_tensors(self.sim)
+
+        
         # add noise if needed
         if self.add_noise:
             self.obs_buf += (2 * torch.rand_like(self.obs_buf) - 1) * self.noise_scale_vec
@@ -598,7 +602,16 @@ class SkinnerLeggedRobot(BaseTask):
                                                         self.envs[0],
                                                         self.camera_handles[0],
                                                         gymapi.IMAGE_COLOR)
-        self.torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
+        torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
+        
+        self.camera_buffers = torch.zeros(self.num_envs, *torch_camera_tensor.shape, dtype=torch.int8, device=self.device, requires_grad=False)
+        for i in range(self.num_envs):
+            camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, 
+                                                        self.envs[i],
+                                                        self.camera_handles[i],
+                                                        gymapi.IMAGE_COLOR)
+            torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
+            self.camera_buffers[i,:] = torch_camera_tensor
         
 
     def _prepare_reward_function(self):

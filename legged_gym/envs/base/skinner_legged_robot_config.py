@@ -33,7 +33,10 @@ from .base_config import BaseConfig
 class SkinnerLeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        num_observations = 10
+        camera_width = 320
+        camera_height = 240
+        other_observations = 6
+        num_observations = camera_width * camera_height * 4 + other_observations
         num_pretrained_observations = 235 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
@@ -69,9 +72,9 @@ class SkinnerLeggedRobotCfg(BaseConfig):
     class commands:
         curriculum = False
         max_curriculum = 1.
-        num_commands = 4 # default: lin_vel_x, lin_vel_y, ang_vel_yaw, heading (in heading mode ang_vel_yaw is recomputed from heading error)
+        num_commands = 3 # default: lin_vel_x, lin_vel_y, ang_vel_yaw)
         resampling_time = 10. # time before command are changed[s]
-        heading_command = True # if true: compute ang vel command from heading error
+        heading_command = False # if true: compute ang vel command from heading error
         class ranges:
             lin_vel_x = [-1.0, 1.0] # min max [m/s]
             lin_vel_y = [-1.0, 1.0]   # min max [m/s]
@@ -188,9 +191,9 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
     class policy:
         # Policy observation is different from env observation
         # Here policy is only training navigation on top of pretrained walking model
-        num_obs = 10 # 3 for diff location. 4 for previous command. 3 for base velocity 
+        num_obs = 7 # 108 for camera. 4 for previous command. 3 for base velocity 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 4 # 4 command for walking model. [LinX LinY Heading AngVel]
+        num_actions = 3 # 4 command for walking model. [LinX LinY AngVel]
         init_noise_std = 1.0
         actor_hidden_dims = [88, 44, 22] # 7 input dimension. 3 for diff location. 4 for commands
         critic_hidden_dims = [88, 44, 22]
