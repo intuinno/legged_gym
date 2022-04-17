@@ -28,15 +28,20 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+CAMERA_WIDTH = 160
+CAMERA_HEIGHT = 120
+NUM_VISUAL_FEATURES = 108
+OTHER_OBSERVATIONS = 6 # 3 for previous commands, 3 for lin XYZ
+
 from .base_config import BaseConfig
 
 class SkinnerLeggedRobotCfg(BaseConfig):
     class env:
         num_envs = 4096
-        camera_width = 320
-        camera_height = 240
-        other_observations = 6
-        num_observations = camera_width * camera_height * 4 + other_observations
+        camera_width = CAMERA_WIDTH
+        camera_height = CAMERA_HEIGHT
+        other_observations = OTHER_OBSERVATIONS
+        num_observations = camera_height * camera_width * 4 + other_observations
         num_pretrained_observations = 235 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
@@ -191,12 +196,17 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
     class policy:
         # Policy observation is different from env observation
         # Here policy is only training navigation on top of pretrained walking model
-        num_obs = 7 # 108 for camera. 4 for previous command. 3 for base velocity 
+        camera_height = CAMERA_HEIGHT
+        camera_width = CAMERA_WIDTH 
+        num_obs = camera_height * camera_width * 4 + OTHER_OBSERVATIONS
+        num_visual_features = NUM_VISUAL_FEATURES 
+        other_observations = OTHER_OBSERVATIONS
+        num_mlp_input = num_visual_features + other_observations 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
-        num_actions = 3 # 4 command for walking model. [LinX LinY AngVel]
+        num_actions = 3 # 3 command for walking model. [LinX LinY AngVel]
         init_noise_std = 1.0
-        actor_hidden_dims = [88, 44, 22] # 7 input dimension. 3 for diff location. 4 for commands
-        critic_hidden_dims = [88, 44, 22]
+        actor_hidden_dims = [4,  2] * num_mlp_input # 7 input dimension. 3 for diff location. 4 for commands
+        critic_hidden_dims = [4, 2] * num_mlp_input
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
         # only for 'ActorCriticRecurrent':
         # rnn_type = 'lstm'
@@ -219,7 +229,7 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         max_grad_norm = 1.
 
     class runner:
-        policy_class_name = 'ActorCritic'
+        policy_class_name = 'SkinnerActorCritic'
         algorithm_class_name = 'PPO'
         num_steps_per_env = 24 # per iteration
         max_iterations = 1500 # number of policy updates

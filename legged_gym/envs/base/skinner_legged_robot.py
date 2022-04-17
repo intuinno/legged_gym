@@ -249,10 +249,10 @@ class SkinnerLeggedRobot(BaseTask):
                                                 filename)
             self.img_idx += 1
         
-        self.obs_buf = torch.cat(( self.camera_buffers,
-                                  self.diff_pos,
-                                  self.base_lin_vel,
-                                  self.commands), dim=-1) 
+        self.obs_buf = torch.cat((self.base_lin_vel,
+                                  self.commands[:, :3],
+                                  self.camera_buffers.view(self.num_envs, -1)), dim=-1)
+        
         self.gym.end_access_image_tensors(self.sim)
 
         
@@ -774,8 +774,8 @@ class SkinnerLeggedRobot(BaseTask):
         camera_offset = gymapi.Vec3(0.6, 0, 1.0)
         camera_rotation = gymapi.Quat.from_axis_angle(gymapi.Vec3(0, 1, 0), np.deg2rad(0))
         camera_properties = gymapi.CameraProperties()
-        camera_properties.width = 360
-        camera_properties.height = 240
+        camera_properties.width = self.cfg.env.camera_width
+        camera_properties.height = self.cfg.env.camera_height 
         camera_properties.enable_tensors = True
 
 
