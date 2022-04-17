@@ -205,8 +205,8 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 3 # 3 command for walking model. [LinX LinY AngVel]
         init_noise_std = 1.0
-        actor_hidden_dims = [4,  2] * num_mlp_input # 7 input dimension. 3 for diff location. 4 for commands
-        critic_hidden_dims = [4, 2] * num_mlp_input
+        actor_hidden_dims = [4 * num_mlp_input,  2 * num_mlp_input]  # 7 input dimension. 3 for diff location. 4 for commands
+        critic_hidden_dims = [4 * num_mlp_input, 2 * num_mlp_input] 
         activation = 'elu' # can be elu, relu, selu, crelu, lrelu, tanh, sigmoid
         # only for 'ActorCriticRecurrent':
         # rnn_type = 'lstm'
