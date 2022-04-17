@@ -28,7 +28,6 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-DEBUG_SAVE_CAMERA_IMAGES = True 
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
@@ -51,7 +50,7 @@ from legged_gym.utils.helpers import class_to_dict
 from .skinner_legged_robot_config import SkinnerLeggedRobotCfg
 
 class SkinnerLeggedRobot(BaseTask):
-    def __init__(self, cfg: SkinnerLeggedRobotCfg, sim_params, physics_engine, sim_device, headless):
+    def __init__(self, cfg: SkinnerLeggedRobotCfg, sim_params, physics_engine, sim_device, headless, save_camera):
         """ Parses the provided config file,
             calls create_sim() (which creates, simulation, terrain and environments),
             initilizes pytorch buffers used during training
@@ -66,6 +65,7 @@ class SkinnerLeggedRobot(BaseTask):
         """
         self.cfg = cfg
         self.sim_params = sim_params
+        self.save_camera = save_camera
         self.height_samples = None
         self.debug_viz = False
         self.init_done = False
@@ -78,7 +78,7 @@ class SkinnerLeggedRobot(BaseTask):
         self._prepare_reward_function()
         self.init_done = True
 
-        if DEBUG_SAVE_CAMERA_IMAGES:
+        if self.save_camera:
             self.img_idx = 0
 
     def step(self, actions):
@@ -238,7 +238,7 @@ class SkinnerLeggedRobot(BaseTask):
         
         self.gym.start_access_image_tensors(self.sim)
 
-        if DEBUG_SAVE_CAMERA_IMAGES:
+        if self.save_camera:
             path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
             os.makedirs(path, exist_ok=True)
             filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")

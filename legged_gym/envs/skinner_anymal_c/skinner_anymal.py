@@ -45,8 +45,8 @@ from .mixed_terrains.skinner_anymal_c_rough_config import SkinnerAnymalCRoughCfg
 
 class SkinnerAnymal(SkinnerLeggedRobot):
     cfg : SkinnerAnymalCRoughCfg
-    def __init__(self, cfg, sim_params, physics_engine, sim_device, headless):
-        super().__init__(cfg, sim_params, physics_engine, sim_device, headless)
+    def __init__(self, cfg, sim_params, physics_engine, sim_device, headless, save_camera):
+        super().__init__(cfg, sim_params, physics_engine, sim_device, headless, save_camera)
 
         # load actuator network
         if self.cfg.control.use_actuator_network:
