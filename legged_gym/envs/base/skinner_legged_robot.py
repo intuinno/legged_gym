@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-DEBUG_SAVE_CAMERA_IMAGES = False 
+DEBUG_SAVE_CAMERA_IMAGES = True 
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
@@ -777,6 +777,7 @@ class SkinnerLeggedRobot(BaseTask):
         camera_properties.width = self.cfg.env.camera_width
         camera_properties.height = self.cfg.env.camera_height 
         camera_properties.enable_tensors = True
+        camera_properties.horizontal_fov = 170
 
 
         for i in range(self.num_envs):

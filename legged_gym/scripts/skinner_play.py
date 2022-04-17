@@ -138,6 +138,6 @@ if __name__ == '__main__':
     EXPORT_POLICY = True
     RECORD_FRAMES = True
     MOVE_CAMERA = False
-    FIXED_COMMANDS = True
+    FIXED_COMMANDS = False
     args = get_args()
     play(args)
