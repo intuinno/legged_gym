@@ -28,6 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+import math
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
@@ -134,11 +135,14 @@ class SkinnerLeggedRobot(BaseTask):
 
         # compute observations, rewards, resets, ...
         self.check_termination()
+        
+        self.gym.start_access_image_tensors(self.sim)
+        self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
         self.compute_reward()
+        self.gym.end_access_image_tensors(self.sim)
         env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
         self.reset_idx(env_ids)
-        self.compute_observations() # in some cases a simulation step might be required to refresh some obs (for example body positions)
-
+        
         self.last_actions[:] = self.actions[:]
         self.last_dof_vel[:] = self.dof_vel[:]
         self.last_root_vel[:] = self.root_states[:, 7:13]
@@ -236,7 +240,7 @@ class SkinnerLeggedRobot(BaseTask):
             heights = torch.clip(self.root_states[:, 2].unsqueeze(1) - 0.5 - self.measured_heights, -1, 1.) * self.obs_scales.height_measurements
             self.pretrained_obs_buf = torch.cat((self.pretrained_obs_buf, heights), dim=-1)
         
-        self.gym.start_access_image_tensors(self.sim)
+        
 
         if self.save_camera:
             path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
@@ -249,11 +253,13 @@ class SkinnerLeggedRobot(BaseTask):
                                                 filename)
             self.img_idx += 1
         
+        self.camera_buffers = torch.stack(self.camera_tensors)[:,:,:,:3].permute(0,3,1,2) / 255.
+        
         self.obs_buf = torch.cat((self.base_lin_vel,
                                   self.commands[:, :3],
-                                  self.camera_buffers.view(self.num_envs, -1)), dim=-1)
+                                  torch.reshape(self.camera_buffers, (self.num_envs, -1))), dim=-1)
         
-        self.gym.end_access_image_tensors(self.sim)
+
 
         
         # add noise if needed
@@ -605,13 +611,16 @@ class SkinnerLeggedRobot(BaseTask):
         torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
         
         self.camera_buffers = torch.zeros(self.num_envs, *torch_camera_tensor.shape, dtype=torch.int8, device=self.device, requires_grad=False)
+        self.camera_tensors = []
         for i in range(self.num_envs):
             camera_tensor = self.gym.get_camera_image_gpu_tensor(self.sim, 
                                                         self.envs[i],
                                                         self.camera_handles[i],
                                                         gymapi.IMAGE_COLOR)
             torch_camera_tensor = gymtorch.wrap_tensor(camera_tensor)
-            self.camera_buffers[i,:] = torch_camera_tensor
+            self.camera_tensors.append(torch_camera_tensor)
+            
+            # self.camera_buffers[i,:] = torch_camera_tensor
         
 
     def _prepare_reward_function(self):
@@ -949,4 +958,70 @@ class SkinnerLeggedRobot(BaseTask):
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        return 10000 / (1.0 + self.target_dist * self.target_dist)
+        return 1 / (1.0 + self.target_dist * self.target_dist)
+        
+    def _reward_blue(self):
+        # Reward according to the distance to the target
+        # return 10000 / (1.0 + self.target_dist * self.target_dist)
+
+        saturation = rgb_to_hsv(self.camera_buffers)[:,1,:,:]
+        min_saturation = 0.4
+        one = torch.tensor([1.], device=self.device)
+        zero = torch.tensor([0.] , device=self.device)
+        blues = torch.where(saturation > min_saturation, one, zero)
+        
+        sum = torch.sum(blues, dim=[1,2])
+ 
+        return sum
+
+
+
+def rgb_to_hsv(image: torch.Tensor, eps: float = 1e-8) -> torch.Tensor:
+    r"""Convert an image from RGB to HSV.
+
+    .. image:: _static/img/rgb_to_hsv.png
+
+    The image data is assumed to be in the range of (0, 1).
+
+    Args:
+        image: RGB Image to be converted to HSV with shape of :math:`(*, 3, H, W)`.
+        eps: scalar to enforce numarical stability.
+
+    Returns:
+        HSV version of the image with shape of :math:`(*, 3, H, W)`.
+        The H channel values are in the range 0..2pi. S and V are in the range 0..1.
+
+    .. note::
+       See a working example `here <https://kornia-tutorials.readthedocs.io/en/latest/
+       color_conversions.html>`__.
+
+    Example:
+        >>> input = torch.rand(2, 3, 4, 5)
+        >>> output = rgb_to_hsv(input)  # 2x3x4x5
+    """
+    if not isinstance(image, torch.Tensor):
+        raise TypeError(f"Input type is not a torch.Tensor. Got {type(image)}")
+
+    if len(image.shape) < 3 or image.shape[-3] != 3:
+        raise ValueError(f"Input size must have a shape of (*, 3, H, W). Got {image.shape}")
+
+    max_rgb, argmax_rgb = image.max(-3)
+    min_rgb, argmin_rgb = image.min(-3)
+    deltac = max_rgb - min_rgb
+
+    v = max_rgb
+    s = deltac / (max_rgb + eps)
+
+    deltac = torch.where(deltac == 0, torch.ones_like(deltac), deltac)
+    rc, gc, bc = torch.unbind((max_rgb.unsqueeze(-3) - image), dim=-3)
+
+    h1 = (bc - gc)
+    h2 = (rc - bc) + 2.0 * deltac
+    h3 = (gc - rc) + 4.0 * deltac
+
+    h = torch.stack((h1, h2, h3), dim=-3) / deltac.unsqueeze(-3)
+    h = torch.gather(h, dim=-3, index=argmax_rgb.unsqueeze(-3)).squeeze(-3)
+    h = (h / 6.0) % 1.0
+    h = 2. * math.pi * h  # we return 0/2pi output
+
+    return torch.stack((h, s, v), dim=-3)

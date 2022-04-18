@@ -32,6 +32,7 @@ CAMERA_WIDTH = 160
 CAMERA_HEIGHT = 120
 NUM_VISUAL_FEATURES = 108
 OTHER_OBSERVATIONS = 6 # 3 for previous commands, 3 for lin XYZ
+CAMERA_CHANNEL = 3
 
 from .base_config import BaseConfig
 
@@ -41,7 +42,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
         camera_width = CAMERA_WIDTH
         camera_height = CAMERA_HEIGHT
         other_observations = OTHER_OBSERVATIONS
-        num_observations = camera_height * camera_width * 4 + other_observations
+        num_observations = camera_height * camera_width * CAMERA_CHANNEL + other_observations
         num_pretrained_observations = 235 
         num_privileged_obs = None # if not None a priviledge_obs_buf will be returned by step() (critic obs for assymetric training). None is returned otherwise 
         num_actions = 12
@@ -139,6 +140,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
     class rewards:
         class scales:
             termination = -0.0
+            blue = 1.0
             distance = 1.0
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
@@ -198,7 +200,7 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         # Here policy is only training navigation on top of pretrained walking model
         camera_height = CAMERA_HEIGHT
         camera_width = CAMERA_WIDTH 
-        num_obs = camera_height * camera_width * 4 + OTHER_OBSERVATIONS
+        num_obs = camera_height * camera_width * CAMERA_CHANNEL + OTHER_OBSERVATIONS
         num_visual_features = NUM_VISUAL_FEATURES 
         other_observations = OTHER_OBSERVATIONS
         num_mlp_input = num_visual_features + other_observations 
