@@ -30,6 +30,8 @@
 
 import math
 
+import imageio
+
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
 from warnings import WarningMessage
@@ -246,11 +248,13 @@ class SkinnerLeggedRobot(BaseTask):
             path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
             os.makedirs(path, exist_ok=True)
             filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")
-            self.gym.write_camera_image_to_file(self.sim,
-                                                self.envs[0],
-                                                self.camera_handles[0],
-                                                gymapi.IMAGE_COLOR,
-                                                filename)
+            # self.gym.write_camera_image_to_file(self.sim,
+            #                                     self.envs[0],
+            #                                     self.camera_handles[0],
+            #                                     gymapi.IMAGE_COLOR,
+            #                                     filename)
+            cam_img = self.camera_tensors[0].cpu().numpy()
+            imageio.imwrite(filename, cam_img)
             self.img_idx += 1
         
         self.camera_buffers = torch.stack(self.camera_tensors)[:,:,:,:3].permute(0,3,1,2) / 255.
