@@ -54,8 +54,8 @@ class BaseTask():
 
         # graphics device for rendering, -1 for no rendering
         self.graphics_device_id = self.sim_device_id
-        if self.headless == True:
-            self.graphics_device_id = -1
+        # if self.headless == True:
+        #     self.graphics_device_id = -1
 
         self.num_envs = cfg.env.num_envs
         self.num_obs = cfg.env.num_observations
@@ -131,8 +131,8 @@ class BaseTask():
                     self.enable_viewer_sync = not self.enable_viewer_sync
 
             # fetch results
-            if self.device != 'cpu':
-                self.gym.fetch_results(self.sim, True)
+            # if self.device != 'cpu':
+            self.gym.fetch_results(self.sim, True)
 
             # step graphics
             if self.enable_viewer_sync:
@@ -142,3 +142,7 @@ class BaseTask():
                     self.gym.sync_frame_time(self.sim)
             else:
                 self.gym.poll_viewer_events(self.viewer)
+        elif self.headless:
+            self.gym.fetch_results(self.sim, True)
+            self.gym.step_graphics(self.sim)
+            

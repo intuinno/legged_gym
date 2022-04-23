@@ -141,7 +141,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
         class scales:
             termination = -0.0
             blue = 1.0
-            distance = 1.0
+            distance = 10.0
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
