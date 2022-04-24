@@ -33,6 +33,7 @@
 
 from legged_gym import LEGGED_GYM_ROOT_DIR
 import os
+from datetime import datetime
 
 import isaacgym
 from legged_gym.envs import *
@@ -79,6 +80,7 @@ def play(args):
     camera_vel = np.array([1., 1., 0.])
     camera_direction = np.array(env_cfg.viewer.lookat) - np.array(env_cfg.viewer.pos)
     img_idx = 0
+    time_str = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
 
     for i in range(10*int(env.max_episode_length)):
         commands = policy(obs.detach())
@@ -97,10 +99,12 @@ def play(args):
         pretrained_obs = env.get_pretrained_observations()
         
         if RECORD_FRAMES:
+            
             if i % 2:
-                path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames')
+                path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames')
+
                 os.makedirs(path, exist_ok=True)
-                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
+                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames', f"{img_idx}.png")
                 env.gym.write_viewer_image_to_file(env.viewer, filename)
                 img_idx += 1 
         if MOVE_CAMERA:

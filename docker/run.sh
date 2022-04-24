@@ -10,7 +10,7 @@ then
 	-v /home/intuinno/codegit/:/home/intuinno/codegit \
 	-v /home/intuinno/.ssh/:/home/intuinno/.ssh \
         -v /home/intuinno/.oh-my-zsh/:/home/intuinno/.oh-my-zsh \
-	-v "$HOME/.docker_zsh_history:/home/intuinno/.zsh_history:rw" \
+	-v $HOME/.docker_zsh_history:/home/intuinno/.zsh_history \
         -v "$HOME/.zshrc:/home/intuinno/.zshrc:ro" \
         -e DOCKER_MACHINE_NAME=$2 \
        --user "$(id -u):$(id -g)" \
@@ -28,7 +28,7 @@ else
 	    -v /home/intuinno/.oh-my-zsh/:/home/intuinno/.oh-my-zsh \
 	    -v "$HOME/.docker_zsh_history:/home/intuinno/.zsh_history:rw" \
             -v "$HOME/.zshrc:/home/intuinno/.zshrc:ro" \
-	    -e PS1="🐳 \e[0;34m$2\e[0m \w # " "]]"
+            -e DOCKER_MACHINE_NAME=$2 \
 	    --ipc=host -e DISPLAY=$DISPLAY \
 	    --user "$(id -u):$(id -g)" --network=host --gpus $1 --name=$2 \
 	    skinner_legged /bin/zsh 

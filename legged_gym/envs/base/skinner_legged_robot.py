@@ -34,6 +34,7 @@ import imageio
 
 from legged_gym import LEGGED_GYM_ROOT_DIR, envs
 from time import time
+from datetime import datetime
 from warnings import WarningMessage
 import numpy as np
 import os
@@ -83,6 +84,7 @@ class SkinnerLeggedRobot(BaseTask):
 
         if self.save_camera:
             self.img_idx = 0
+            self.save_camera_time_str =  datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
 
     def step(self, actions):
         """ Apply actions, simulate, call self.post_physics_step()
@@ -245,9 +247,9 @@ class SkinnerLeggedRobot(BaseTask):
         
 
         if self.save_camera:
-            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames')
+            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', self.save_camera_time_str)
             os.makedirs(path, exist_ok=True)
-            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', f"{self.img_idx}.png")
+            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', 'camera_frames', self.save_camera_time_str, f"{self.img_idx}.png")
             # self.gym.write_camera_image_to_file(self.sim,
             #                                     self.envs[0],
             #                                     self.camera_handles[0],
@@ -811,7 +813,8 @@ class SkinnerLeggedRobot(BaseTask):
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             base_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
 
-            pos[:2] += torch_rand_float(-1., 1., (2,1), device=self.device).squeeze(1) 
+            pos[:2] += torch_rand_float(-2., 2., (2,1), device=self.device).squeeze(1) 
+            pos[2] = 3.
             
             default_pose.p = gymapi.Vec3(*pos)
 
@@ -962,7 +965,7 @@ class SkinnerLeggedRobot(BaseTask):
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        return 1 / (1.0 + self.target_dist * self.target_dist)
+        return 1 / (1.0 + self.target_dist)
         
     def _reward_blue(self):
         # Reward according to the distance to the target
@@ -974,7 +977,7 @@ class SkinnerLeggedRobot(BaseTask):
         zero = torch.tensor([0.] , device=self.device)
         blues = torch.where(saturation > min_saturation, one, zero)
         
-        sum = torch.sum(blues, dim=[1,2])
+        sum = torch.mean(blues, dim=[1,2])
  
         return sum
 
