@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-DEBUG = True 
+DEBUG = False 
 
 import math
 

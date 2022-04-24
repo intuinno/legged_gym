@@ -1,5 +1,6 @@
 import os
 import matplotlib
+import matplotlib.image
 import numpy as np
 import sys
 import kornia as K
@@ -22,20 +23,30 @@ def make_hsv(directory, f_path):
 
     for color, index in {'hue' : 0, 
                  'saturation' : 1,
-                 'value' : 2}:
-        img = x_hsv[:, index, :, :]
+                 'value' : 2}.items():
+        img = x_hsv[index, :, :]
         cam_img = img.numpy().squeeze()
         filename = os.path.join(directory, color, basename)
         matplotlib.image.imsave(filename, cam_img)
+        print("Saved ", filename)
+    
+    saturation = x_hsv[1,:,:]
+    min_saturation = 0.4
+    one = torch.tensor([1.])
+    zero = torch.tensor([0.])
+    blues = torch.where(saturation > min_saturation, one, zero)
+    cam_img = blues.numpy().squeeze()
+    filename = os.path.join(directory, 'filter', basename)
+    matplotlib.image.imsave(filename, cam_img)
+    print('Saved ', filename)
         
          
 
-try:
-    directory_name=sys.argv[1]
-    for n in ['hue', 'saturation', 'value']:
+directory_name=sys.argv[1]
+if os.path.isdir(directory_name):
+    for n in ['hue', 'saturation', 'value', 'filter']:
         path = os.path.join(directory_name, n)
         os.makedirs(path, exist_ok=True)
     make_movie(directory_name)
-except:
-    print('Please pass directory_name')
-
+else:
+    print('The directory name does not exist', directory_name)
