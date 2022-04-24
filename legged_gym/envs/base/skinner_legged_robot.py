@@ -261,8 +261,10 @@ class SkinnerLeggedRobot(BaseTask):
         
         self.camera_buffers = torch.stack(self.camera_tensors)[:,:,:,:3].permute(0,3,1,2) / 255.
         
-        self.obs_buf = torch.cat((self.base_lin_vel,
+        self.obs_buf = torch.cat((self.base_lin_vel * self.obs_scales.lin_vel,
                                   self.commands[:, :3],
+                                  self.base_ang_vel * self.obs_scales.ang_vel,
+                                  self.projected_gravity,
                                   torch.reshape(self.camera_buffers, (self.num_envs, -1))), dim=-1)
         
 
