@@ -100,13 +100,12 @@ def play(args):
         
         if RECORD_FRAMES:
             
-            if i % 2:
-                path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames')
+            path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames')
 
-                os.makedirs(path, exist_ok=True)
-                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames', f"{img_idx}.png")
-                env.gym.write_viewer_image_to_file(env.viewer, filename)
-                img_idx += 1 
+            os.makedirs(path, exist_ok=True)
+            filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', time_str, 'frames', f"{img_idx}.png")
+            env.gym.write_viewer_image_to_file(env.viewer, filename)
+            img_idx += 1 
         if MOVE_CAMERA:
             camera_position += camera_vel * env.dt
             env.set_camera(camera_position, camera_position + camera_direction)

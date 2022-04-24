@@ -28,6 +28,8 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
+DEBUG = True 
+
 import math
 
 import imageio
@@ -980,6 +982,10 @@ class SkinnerLeggedRobot(BaseTask):
         blues = torch.where(saturation > min_saturation, one, zero)
         
         sum = torch.mean(blues, dim=[1,2])
+
+        if DEBUG:
+            if blues.unique().shape[0] > 1:
+                print (self.img_idx)
  
         return sum
 
