@@ -20,7 +20,9 @@ RUN apt-get update \
  pigz \
  git \
  libegl1 \
- git-lfs
+ git-lfs \
+ zsh \ 
+ sudo 
 
 # Force gcc 8 to avoid CUDA 10 build issues on newer base OS
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-8 8
@@ -38,6 +40,11 @@ COPY docker/10_nvidia.json /usr/share/glvnd/egl_vendor.d/10_nvidia.json
 #USER gymuser
 RUN addgroup --gid 1001 intuinno
 RUN adduser --disabled-password --gecos '' --uid 1001 --gid 1001 intuinno
+RUN adduser intuinno sudo 
+
+RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> \
+/etc/sudoers 
+
 USER intuinno
 
 
