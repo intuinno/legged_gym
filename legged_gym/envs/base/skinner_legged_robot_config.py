@@ -31,7 +31,7 @@
 CAMERA_WIDTH = 160
 CAMERA_HEIGHT = 120
 NUM_VISUAL_FEATURES = 108
-OTHER_OBSERVATIONS = 6 # 3 for previous commands, 3 for lin XYZ
+OTHER_OBSERVATIONS = 12 # 3 for previous commands, 3 for lin XYZ, 3 for angular velocity, 3 for projected gravity
 CAMERA_CHANNEL = 3
 
 from .base_config import BaseConfig
@@ -141,7 +141,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
         class scales:
             termination = -0.0
             blue = 1.0
-            distance = 10.0
+            distance = 1.0
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
         tracking_sigma = 0.25 # tracking reward = exp(-error^2/sigma)
