@@ -7,7 +7,7 @@
 			"path": "../rsl_rl"
 		},
 		{
-			"path": "../../../../opt/legged_gym/logs"
+			"path": "logs"
 		}
 	],
 	"settings": {},

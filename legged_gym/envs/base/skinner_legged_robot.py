@@ -380,7 +380,7 @@ class SkinnerLeggedRobot(BaseTask):
 
         # Calculate target_dist 
         self.diff_pos = self.target_root_positions - self.nose_pos
-        self.target_dist = torch.sqrt(torch.square(self.diff_pos).sum(-1))
+        self.target_dist = torch.square(self.diff_pos).sum(-1)
 
         if self.cfg.commands.heading_command:
             forward = quat_apply(self.base_quat, self.forward_vec)
@@ -1025,7 +1025,7 @@ class SkinnerLeggedRobot(BaseTask):
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        return 1 / (1.0 + self.target_dist*self.target_dist)
+        return 1 / (1.0 + self.target_dist)
         
     def _reward_blue(self):
         # Reward according to the distance to the target
