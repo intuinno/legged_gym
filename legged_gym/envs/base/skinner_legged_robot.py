@@ -136,7 +136,11 @@ class SkinnerLeggedRobot(BaseTask):
         self.base_lin_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 7:10])
         self.base_ang_vel[:] = quat_rotate_inverse(self.base_quat, self.root_states[:, 10:13])
         self.projected_gravity[:] = quat_rotate_inverse(self.base_quat, self.gravity_vec)
-
+        nose = torch.tensor([1.0,0.,0.], dtype=torch.float, device=self.device, requires_grad=False)
+        ones = torch.ones(self.num_envs, device=self.device, requires_grad=False)
+        nose_broadcast = ones[:, None] * nose
+        self.nose_pos[:] = tf_apply(self.base_quat, self.root_pos, nose_broadcast)
+         
         self._post_physics_step_callback()
 
         # compute observations, rewards, resets, ...
@@ -375,7 +379,7 @@ class SkinnerLeggedRobot(BaseTask):
         # self._resample_commands(env_ids)
 
         # Calculate target_dist 
-        self.diff_pos = self.target_root_positions - self.root_pos
+        self.diff_pos = self.target_root_positions - self.nose_pos
         self.target_dist = torch.sqrt(torch.square(self.diff_pos).sum(-1))
 
         if self.cfg.commands.heading_command:
@@ -593,6 +597,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.measured_heights = 0
         
         self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
+        self.nose_pos = torch.zeros(self.num_envs, 3, device=self.device, requires_grad=False)
 
         # joint positions offsets and PD gains
         self.default_dof_pos = torch.zeros(self.num_dof, dtype=torch.float, device=self.device, requires_grad=False)
@@ -818,7 +823,7 @@ class SkinnerLeggedRobot(BaseTask):
             base_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
 
             pos[:2] += torch_rand_float(-2., 2., (2,1), device=self.device).squeeze(1) 
-            pos[2] = 3.
+            pos[2] = 1.
             
             default_pose.p = gymapi.Vec3(*pos)
 
@@ -893,19 +898,70 @@ class SkinnerLeggedRobot(BaseTask):
         # draw height lines
         if not self.terrain.cfg.measure_heights:
             return
+
+        DRAW_HEIGHTS = False
+        DRAW_NOSE = True
+        DRAW_CAMERA_AXES = True
+        
         self.gym.clear_lines(self.viewer)
         self.gym.refresh_rigid_body_state_tensor(self.sim)
-        sphere_geom = gymutil.WireframeSphereGeometry(0.02, 4, 4, None, color=(1, 1, 0))
-        for i in range(self.num_envs):
-            base_pos = (self.root_states[i, :3]).cpu().numpy()
-            heights = self.measured_heights[i].cpu().numpy()
-            height_points = quat_apply_yaw(self.base_quat[i].repeat(heights.shape[0]), self.height_points[i]).cpu().numpy()
-            for j in range(heights.shape[0]):
-                x = height_points[j, 0] + base_pos[0]
-                y = height_points[j, 1] + base_pos[1]
-                z = heights[j]
-                sphere_pose = gymapi.Transform(gymapi.Vec3(x, y, z), r=None)
-                gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], sphere_pose) 
+
+        if DRAW_HEIGHTS:
+            sphere_geom = gymutil.WireframeSphereGeometry(0.02, 4, 4, None, color=(1, 1, 0))
+            for i in range(self.num_envs):
+                base_pos = (self.root_states[i, :3]).cpu().numpy()
+                heights = self.measured_heights[i].cpu().numpy()
+                height_points = quat_apply_yaw(self.base_quat[i].repeat(heights.shape[0]), self.height_points[i]).cpu().numpy()
+                for j in range(heights.shape[0]):
+                    x = height_points[j, 0] + base_pos[0]
+                    y = height_points[j, 1] + base_pos[1]
+                    z = heights[j]
+                    sphere_pose = gymapi.Transform(gymapi.Vec3(x, y, z), r=None)
+                    gymutil.draw_lines(sphere_geom, self.gym, self.viewer, None, sphere_pose) 
+        
+        if DRAW_NOSE:
+            sphere_geom = gymutil.WireframeSphereGeometry(0.1, 4, 4, None, color=(1, 1, 0))
+            axes_geom = gymutil.AxesGeometry(scale=1.0)
+            
+            for i in range(self.num_envs):
+                base_pos = (self.root_states[i,:3]).cpu().numpy()
+                base_pos = gymapi.Vec3(*base_pos)
+                base_quat = gymapi.Quat(*self.base_quat[i])
+                base_transform = gymapi.Transform(p=base_pos, 
+                                                  r=base_quat)
+                
+                nose_pos = base_transform.transform_point(gymapi.Vec3(1,0,0))
+                nose_pose = gymapi.Transform(nose_pos, r=base_quat)
+
+                nose_pos_from_self = self.nose_pos[i].cpu().numpy()
+                nose_pos_from_self = gymapi.Vec3(*nose_pos_from_self)
+                nose_pose_from_self = gymapi.Transform(p = nose_pos_from_self,
+                                                       r = base_quat)
+                gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], nose_pose_from_self)
+                gymutil.draw_lines(axes_geom, self.gym, self.viewer, self.envs[i], nose_pose)
+
+        if DRAW_CAMERA_AXES:
+            
+            axes_geom = gymutil.AxesGeometry(scale=1.0)
+            for i in range(self.num_envs):
+                base_pos = (self.root_states[i,:3]).cpu().numpy()
+                base_pos = gymapi.Vec3(*base_pos)
+                base_quat = gymapi.Quat(*self.base_quat[i])
+                # base_quat = gymapi.Quat(self.base_quat[i][0],
+                #                         self.base_quat[i][1],
+                #                         self.base_quat[i][2],
+                #                         self.base_quat[i][3])
+                base_transform = gymapi.Transform(p=base_pos, 
+                                                  r=base_quat)
+                
+                nose_pos = base_transform.transform_point(gymapi.Vec3(0.6,0,0))
+                nose_pose = gymapi.Transform(nose_pos, r=base_quat)
+                gymutil.draw_lines(axes_geom, self.gym, self.viewer, self.envs[i], nose_pose)
+
+        # sphere_geom = gymutil.WireframeSphereGeometry(0.02, 4, 4, None, color=(1,1,0))
+        # sphere_pose = gymapi.Transform(gymapi.Vec3(0,0,2), r=None)
+        # gymutil.draw_lines(sphere_geom, self.gym, self.viewer, None,  sphere_pose)
+        
 
     def _init_height_points(self):
         """ Returns points at which the height measurments are sampled (in base frame)
@@ -969,7 +1025,7 @@ class SkinnerLeggedRobot(BaseTask):
 
     def _reward_distance(self):
         # Reward according to the distance to the target
-        return 1 / (1.0 + self.target_dist)
+        return 1 / (1.0 + self.target_dist*self.target_dist)
         
     def _reward_blue(self):
         # Reward according to the distance to the target

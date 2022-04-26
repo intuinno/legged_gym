@@ -68,10 +68,10 @@ class SkinnerLeggedRobotCfg(BaseConfig):
         max_init_terrain_level = 5 # starting curriculum state
         terrain_length = 8.
         terrain_width = 8.
-        num_rows= 10 # number of terrain rows (levels)
-        num_cols = 20 # number of terrain cols (types)
+        num_rows= 2 # number of terrain rows (levels)
+        num_cols = 3 # number of terrain cols (types)
         # terrain types: [smooth slope, rough slope, stairs up, stairs down, discrete]
-        terrain_proportions = [0.1, 0.1, 0.35, 0.25, 0.2]
+        terrain_proportions = [0.9, 0.1, 0.0, 0.0, 0.0]
         # trimesh only:
         slope_treshold = 0.75 # slopes above this threshold will be corrected to vertical surfaces
 
