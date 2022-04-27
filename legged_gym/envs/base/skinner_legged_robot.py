@@ -73,7 +73,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.sim_params = sim_params
         self.save_camera = save_camera
         self.height_samples = None
-        self.debug_viz = True
+        self.debug_viz = False
         self.init_done = False
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
