@@ -822,12 +822,11 @@ class SkinnerLeggedRobot(BaseTask):
             self.gym.set_actor_rigid_body_properties(env_handle, actor_handle, body_props, recomputeInertia=True)
             base_handle = self.gym.get_actor_rigid_body_handle(env_handle, actor_handle, 0)
 
-            pos[:2] += torch_rand_float(-2., 2., (2,1), device=self.device).squeeze(1) 
+            #Add ballmarker
+            pos[:2] += torch_rand_float(-9., 9., (2,1), device=self.device).squeeze(1) 
             pos[2] = 1.
-            
             default_pose.p = gymapi.Vec3(*pos)
 
-            #Add ballmarker
             marker_handle = self.gym.create_actor(env_handle, marker_asset, default_pose, "marker", i, 1, 1)
             self.gym.set_rigid_body_color(env_handle, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(0, 0, 1))
             

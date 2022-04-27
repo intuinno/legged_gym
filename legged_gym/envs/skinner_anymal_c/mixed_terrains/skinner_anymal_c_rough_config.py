@@ -36,7 +36,7 @@ class SkinnerAnymalCRoughCfg( SkinnerLeggedRobotCfg ):
         num_actions = 12
 
     class terrain( SkinnerLeggedRobotCfg.terrain ):
-        mesh_type = 'trimesh'
+        mesh_type = 'plane'
 
     class init_state( SkinnerLeggedRobotCfg.init_state ):
         pos = [0.0, 0.0, 0.6] # x,y,z [m]
