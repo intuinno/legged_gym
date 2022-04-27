@@ -140,7 +140,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
     class rewards:
         class scales:
             termination = -0.0
-            blue = 1.0
+            blue = 100.0
             distance = 1.0
 
         only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
@@ -254,4 +254,4 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         checkpoint = -1 # -1 = last saved model
         resume_path = None # updated from load_run and chkpt
         # Algorithm computes action once every # walking_decimation times 
-        walking_decimation = 1 
+        walking_decimation = 10
