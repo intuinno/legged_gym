@@ -73,7 +73,7 @@ class SkinnerLeggedRobot(BaseTask):
         self.sim_params = sim_params
         self.save_camera = save_camera
         self.height_samples = None
-        self.debug_viz = False
+        self.debug_viz = DEBUG
         self.init_done = False
         self._parse_cfg(self.cfg)
         super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
@@ -1039,9 +1039,9 @@ class SkinnerLeggedRobot(BaseTask):
         
         sum = torch.mean(blues, dim=[1,2])
 
-        if DEBUG:
-            if blues.unique().shape[0] > 1:
-                print (self.img_idx)
+        # if DEBUG:
+        #     if blues.unique().shape[0] > 1:
+        #         print (self.img_idx)
  
         return sum
 

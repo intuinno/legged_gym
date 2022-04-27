@@ -40,6 +40,15 @@
 				"args": ["--task=skinner", "--experiment=skinner01-lin_velocity", "--num_envs=1"],
 				"console": "integratedTerminal",
 				"justMyCode": true
+			},
+			{
+				"name": "walking train",
+				"type": "python",
+				"request": "launch",
+				"program": "/home/intuinno/codegit/legged_gym/legged_gym/scripts/train.py",
+				"args": ["--task=anymal_c_rough", "--experiment=walking", "--run_name=run01", "--num_envs=10"],
+				"console": "integratedTerminal",
+				"justMyCode": true
 			}
 		]
 	}
