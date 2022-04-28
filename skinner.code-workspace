@@ -42,11 +42,11 @@
 				"justMyCode": true
 			},
 			{
-				"name": "walking train",
+				"name": "walker train",
 				"type": "python",
 				"request": "launch",
 				"program": "/home/intuinno/codegit/legged_gym/legged_gym/scripts/train.py",
-				"args": ["--task=anymal_c_rough", "--experiment=walking", "--run_name=run01", "--num_envs=10"],
+				"args": ["--task=walker", "--experiment=walking", "--run_name=run01", "--num_envs=3"],
 				"console": "integratedTerminal",
 				"justMyCode": true
 			}
