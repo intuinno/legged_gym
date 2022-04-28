@@ -48,7 +48,7 @@ class SkinnerLeggedRobotCfg(BaseConfig):
         num_actions = 12
         env_spacing = 3.  # not used with heightfields/trimeshes 
         send_timeouts = True # send time out information to the algorithm
-        episode_length_s = 2000 # episode length in seconds
+        episode_length_s = 40 # episode length in seconds
 
     class terrain:
         mesh_type = 'plane' # "heightfield" # none, plane, heightfield or trimesh
