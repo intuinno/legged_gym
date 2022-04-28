@@ -236,7 +236,7 @@ class SkinnerLeggedRobotCfgPPO(BaseConfig):
         num_steps_per_env = 24 # per iteration
         max_iterations = 1500 # number of policy updates
         # Pretrained model parameters
-        pretrained_policy_path = '/home/intuinno/codegit/legged_gym/resources/walker_nets/walker.pt'
+        pretrained_policy_path = '/home/intuinno/codegit/legged_gym/resources/walker_nets/walker_10_decimation.pt'
         pretrained_num_obs = 235
         pretrained_num_critic_obs = 235
         pretrained_num_actions = 12
