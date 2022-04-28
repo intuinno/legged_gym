@@ -36,6 +36,7 @@ from .anymal_c.anymal import Anymal
 from .skinner_anymal_c.skinner_anymal import SkinnerAnymal
 from .anymal_c.mixed_terrains.anymal_c_rough_config import AnymalCRoughCfg, AnymalCRoughCfgPPO
 from .skinner_anymal_c.mixed_terrains.skinner_anymal_c_rough_config import SkinnerAnymalCRoughCfg, SkinnerAnymalCRoughCfgPPO
+from .skinner_anymal_c.mixed_terrains.walker_anymal_c_rough_config import WalkerAnymalCRoughCfg, WalkerAnymalCRoughCfgPPO
 from .anymal_c.flat.anymal_c_flat_config import AnymalCFlatCfg, AnymalCFlatCfgPPO
 from .anymal_b.anymal_b_config import AnymalBRoughCfg, AnymalBRoughCfgPPO
 from .cassie.cassie import Cassie
@@ -49,6 +50,7 @@ from legged_gym.utils.task_registry import task_registry
 
 task_registry.register( "anymal_c_rough", Anymal, AnymalCRoughCfg(), AnymalCRoughCfgPPO() )
 task_registry.register( "skinner", SkinnerAnymal, SkinnerAnymalCRoughCfg(), SkinnerAnymalCRoughCfgPPO() )
+task_registry.register( "walker", Anymal, WalkerAnymalCRoughCfg(), WalkerAnymalCRoughCfgPPO() )
 task_registry.register( "anymal_c_flat", Anymal, AnymalCFlatCfg(), AnymalCFlatCfgPPO() )
 task_registry.register( "anymal_b", Anymal, AnymalBRoughCfg(), AnymalBRoughCfgPPO() )
 task_registry.register( "a1", LeggedRobot, A1RoughCfg(), A1RoughCfgPPO() )
